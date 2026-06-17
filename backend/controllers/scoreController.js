@@ -1,5 +1,6 @@
 const scoreService = require('../services/scoreService');
 const asyncHandler = require('../utils/asyncHandler');
+const simulationRunner = require('../utils/simulationRunner');
 
 /**
  * Handle new score submission
@@ -68,10 +69,88 @@ const getMatchmaking = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Get current simulation status
+ * GET /api/simulation/status
+ */
+const getSimulationStatus = asyncHandler(async (req, res) => {
+  const status = simulationRunner.status();
+  res.status(200).json({
+    status: 'success',
+    data: status,
+  });
+});
+
+/**
+ * Start simulation
+ * POST /api/simulation/start
+ */
+const startSimulation = asyncHandler(async (req, res) => {
+  const { intervalSeconds } = req.body;
+  simulationRunner.start(Number(intervalSeconds) || 5);
+  res.status(200).json({
+    status: 'success',
+    message: 'Simulation started successfully',
+    data: simulationRunner.status(),
+  });
+});
+
+/**
+ * Stop simulation
+ * POST /api/simulation/stop
+ */
+const stopSimulation = asyncHandler(async (req, res) => {
+  simulationRunner.stop();
+  res.status(200).json({
+    status: 'success',
+    message: 'Simulation stopped successfully',
+    data: simulationRunner.status(),
+  });
+});
+
+/**
+ * Trigger simulated record injection immediately
+ * POST /api/simulation/trigger
+ */
+const triggerSimulation = asyncHandler(async (req, res) => {
+  const { type } = req.body;
+  if (type && !['normal', 'review', 'suspicious'].includes(type)) {
+    return res.status(400).json({
+      status: 'fail',
+      message: 'Invalid simulation type. Must be normal, review, or suspicious.',
+    });
+  }
+  const record = await simulationRunner.trigger(type);
+  res.status(201).json({
+    status: 'success',
+    message: 'Telemetry record simulated and injected successfully',
+    data: record,
+  });
+});
+
+/**
+ * Reset simulated scores
+ * POST /api/simulation/reset
+ */
+const resetSimulation = asyncHandler(async (req, res) => {
+  simulationRunner.stop();
+  await simulationRunner.reset();
+  res.status(200).json({
+    status: 'success',
+    message: 'All simulated data deleted, simulation stopped',
+    data: simulationRunner.status(),
+  });
+});
+
 module.exports = {
   postScore,
   getLeaderboard,
   getLeaderboardByRegion,
   getFlaggedPlayers,
   getMatchmaking,
+  getSimulationStatus,
+  startSimulation,
+  stopSimulation,
+  triggerSimulation,
+  resetSimulation,
 };

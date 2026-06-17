@@ -48,6 +48,11 @@
           <ion-icon name="information-circle-outline"></ion-icon>
           <span>Rule Reference</span>
         </a>
+        <a href="#simulation" class="nav-item" data-tab="simulation">
+          <ion-icon name="pulse-outline"></ion-icon>
+          <span>Live Simulator</span>
+          <span class="badge badge-info hidden" id="simulation-active-badge">Live</span>
+        </a>
       </nav>
       
       <div class="sidebar-footer">
@@ -252,7 +257,7 @@
           <ion-icon name="people-outline"></ion-icon>
           <div class="info-content">
             <h4>Regional Skill & Latency Matchmaker</h4>
-            <p>Clean players are dynamically grouped into matches. A valid queue matching pool requires exact matches in <strong>Region</strong>, <strong>Skill Tier</strong> (Beginner: 0-5k, Intermediate: 5-10k, Advanced: 10k+), and <strong>Ping Bucket</strong> (Low < 60ms, Medium 60-120ms, High > 120ms).</p>
+            <p>Clean players are dynamically grouped into matches. A valid queue matching pool requires exact matches in <strong>Region</strong>, <strong>Skill Tier</strong> (Beginner: 0-5k, Intermediate: 5-10k, Advanced: 10k+), and <strong>Ping Bucket</strong> (Low &lt; 60ms, Medium 60-120ms, High &gt; 120ms).</p>
           </div>
         </div>
         
@@ -264,6 +269,100 @@
           <div class="card-body">
             <div class="matchmaker-container" id="matchmaking-pools-container">
               <div class="text-center py-4 text-muted">Loading queue pools...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: LIVE SIMULATOR -->
+      <section id="view-simulation" class="tab-view">
+        <div class="simulation-layout">
+          <!-- LEFT COLUMN: CONTROLLER -->
+          <div class="simulation-controller">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h3>Simulator Engine</h3>
+                <div class="simulation-status-indicator">
+                  <span class="status-pulse-dot" id="sim-status-dot"></span>
+                  <span class="status-label-text" id="sim-status-text">Stopped</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="sim-toggle-wrapper">
+                  <label class="switch">
+                    <input type="checkbox" id="sim-toggle-checkbox">
+                    <span class="slider round"></span>
+                  </label>
+                  <div class="sim-toggle-details">
+                    <h4 id="sim-power-title">Start Simulator</h4>
+                    <p class="text-muted">Generates background matches automatically</p>
+                  </div>
+                </div>
+
+                <div class="form-group mt-4">
+                  <div class="slider-header">
+                    <label for="sim-speed-slider">Sim Speed (Interval between matches)</label>
+                    <span id="sim-speed-val">5s</span>
+                  </div>
+                  <input type="range" id="sim-speed-slider" min="2" max="30" value="5" class="range-slider">
+                </div>
+              </div>
+            </div>
+
+            <!-- INJECTION PANEL -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h3>Manual Event Injection</h3>
+              </div>
+              <div class="card-body">
+                <p class="text-muted mb-4" style="font-size: 13px;">Force telemetry events to be generated and ingested instantly to see how leaderboards, security audit logs, and matchmaking groups handle them.</p>
+                <div class="injection-buttons">
+                  <button class="btn btn-secondary w-full justify-start btn-inject-normal" id="btn-inject-normal">
+                    <ion-icon name="checkmark-circle-outline" style="color: var(--color-success);"></ion-icon>
+                    <span>Inject Clean Player Match</span>
+                  </button>
+                  <button class="btn btn-secondary w-full justify-start btn-inject-review" id="btn-inject-review">
+                    <ion-icon name="alert-circle-outline" style="color: var(--color-warning);"></ion-icon>
+                    <span>Inject Review-Tier Telemetry</span>
+                  </button>
+                  <button class="btn btn-secondary w-full justify-start btn-inject-suspicious" id="btn-inject-suspicious">
+                    <ion-icon name="ban-outline" style="color: var(--color-danger);"></ion-icon>
+                    <span>Inject Suspicious Cheater</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- DATABASE CONTROLS -->
+            <div class="card border-danger-card">
+              <div class="card-header">
+                <h3>Simulation Lifecycle</h3>
+              </div>
+              <div class="card-body">
+                <p class="text-muted mb-4" style="font-size: 13px;">Wipe all simulated player data (players prefixed with <code>SIM_</code>) from the database to return the workspace to its default clean state.</p>
+                <button class="btn btn-danger-outline w-full" id="btn-sim-reset">
+                  <ion-icon name="trash-outline"></ion-icon>
+                  <span>Reset Simulation Data</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: STREAMING LOGS -->
+          <div class="simulation-logs-panel">
+            <div class="card h-full-card">
+              <div class="card-header flex justify-between">
+                <h3>Event Logs Console</h3>
+                <button class="btn btn-secondary btn-sm" id="btn-clear-sim-logs">
+                  <ion-icon name="close-circle-outline"></ion-icon>
+                  <span>Clear Console</span>
+                </button>
+              </div>
+              <div class="card-body terminal-body">
+                <div class="terminal-console" id="sim-terminal">
+                  <div class="terminal-line system-line">[SYSTEM] Simulation Console Ready. Logs will stream here when active...</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -308,7 +407,7 @@
                     <h4>Instant High Score Hack</h4>
                   </div>
                   <p class="rule-desc">Match duration is under 2 minutes (120 seconds) and score is over 50,000.</p>
-                  <code>match_duration_seconds < 120 && score > 50000</code>
+                  <code>match_duration_seconds &lt; 120 && score > 50000</code>
                 </li>
               </ul>
             </div>

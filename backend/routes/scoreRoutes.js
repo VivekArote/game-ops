@@ -18,4 +18,11 @@ router.get('/flagged-players', scoreController.getFlaggedPlayers);
 // Get grouped matchmaking pools
 router.get('/matchmaking', scoreController.getMatchmaking);
 
+// Simulation controls
+router.get('/simulation/status', scoreController.getSimulationStatus);
+router.post('/simulation/start', scoreController.startSimulation);
+router.post('/simulation/stop', scoreController.stopSimulation);
+router.post('/simulation/trigger', scoreController.triggerSimulation);
+router.post('/simulation/reset', scoreController.resetSimulation);
+
 module.exports = router;

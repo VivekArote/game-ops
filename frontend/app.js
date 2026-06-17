@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
     flagged: [],
     matchmaking: [],
     currentTab: 'dashboard',
-    recentSubmissions: []
+    recentSubmissions: [],
+    simulation: {
+      running: false,
+      intervalSeconds: 5,
+      totalSimulated: 0
+    }
   };
 
   // --- API Endpoint Routes ---
@@ -21,7 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
     scores: `${API_BASE}/api/scores`,
     leaderboard: `${API_BASE}/api/leaderboard`,
     flagged: `${API_BASE}/api/flagged-players`,
-    matchmaking: `${API_BASE}/api/matchmaking`
+    matchmaking: `${API_BASE}/api/matchmaking`,
+    simStatus: `${API_BASE}/api/simulation/status`,
+    simStart: `${API_BASE}/api/simulation/start`,
+    simStop: `${API_BASE}/api/simulation/stop`,
+    simTrigger: `${API_BASE}/api/simulation/trigger`,
+    simReset: `${API_BASE}/api/simulation/reset`
   };
 
   // --- Element Selection ---
@@ -66,7 +76,22 @@ document.addEventListener('DOMContentLoaded', () => {
     ingestForm: document.getElementById('ingest-form'),
     closeModalBtn: document.getElementById('close-modal-btn'),
     cancelModalBtn: document.getElementById('cancel-modal-btn'),
-    formErrorSummary: document.getElementById('form-error-summary')
+    formErrorSummary: document.getElementById('form-error-summary'),
+
+    // Simulation Engine Controls
+    simActiveBadge: document.getElementById('simulation-active-badge'),
+    simStatusDot: document.getElementById('sim-status-dot'),
+    simStatusText: document.getElementById('sim-status-text'),
+    simToggleCheckbox: document.getElementById('sim-toggle-checkbox'),
+    simPowerTitle: document.getElementById('sim-power-title'),
+    simSpeedSlider: document.getElementById('sim-speed-slider'),
+    simSpeedVal: document.getElementById('sim-speed-val'),
+    btnInjectNormal: document.getElementById('btn-inject-normal'),
+    btnInjectReview: document.getElementById('btn-inject-review'),
+    btnInjectSuspicious: document.getElementById('btn-inject-suspicious'),
+    btnSimReset: document.getElementById('btn-sim-reset'),
+    btnClearSimLogs: document.getElementById('btn-clear-sim-logs'),
+    simTerminal: document.getElementById('sim-terminal')
   };
 
   // --- Titles map for views ---
@@ -90,8 +115,29 @@ document.addEventListener('DOMContentLoaded', () => {
     rules: {
       title: 'Rule reference book',
       subtitle: 'Overview of anomaly heuristics and action mitigation tiers.'
+    },
+    simulation: {
+      title: 'Live Telemetry & Matchmaking Simulator',
+      subtitle: 'Simulate concurrent player matches, latency spikes, and security threat vectors.'
     }
   };
+
+  // --- Dynamic Polling Scheduler ---
+  let pollingIntervalId = null;
+  let currentPollingMs = 30000;
+
+  function startPollingScheduler(ms) {
+    if (pollingIntervalId && currentPollingMs === ms) {
+      return; // already polling at this rate
+    }
+    
+    if (pollingIntervalId) {
+      clearInterval(pollingIntervalId);
+    }
+    
+    currentPollingMs = ms;
+    pollingIntervalId = setInterval(fetchAllData, ms);
+  }
 
   // --- Initialize Application ---
   function init() {
@@ -99,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     fetchAllData();
     
-    // Poll for fresh data every 30 seconds
-    setInterval(fetchAllData, 30000);
+    // Start with default 30 seconds polling
+    startPollingScheduler(30000);
   }
 
   // --- Toast Notifications ---
@@ -235,6 +281,116 @@ document.addEventListener('DOMContentLoaded', () => {
     // Live filtering in Leaderboard
     elements.leaderboardSearch.addEventListener('input', renderLeaderboard);
     elements.leaderboardRegionFilter.addEventListener('change', renderLeaderboard);
+
+    // --- Simulator Engine Event Listeners ---
+    if (elements.simToggleCheckbox) {
+      elements.simToggleCheckbox.addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        const speed = elements.simSpeedSlider.value;
+        const endpoint = checked ? API_ROUTES.simStart : API_ROUTES.simStop;
+        
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intervalSeconds: speed })
+        })
+        .then(res => res.json())
+        .then(res => {
+          if (res.status === 'success') {
+            updateSimulationUI(res.data);
+            showToast(checked ? 'Simulation engine started' : 'Simulation engine stopped', 'success');
+            appendSystemConsoleLine(`[SYSTEM] Simulation status changed: ${checked ? 'RUNNING' : 'STOPPED'} (Interval: ${speed}s)`);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showToast('Failed to toggle simulation', 'error');
+          e.target.checked = !checked; // revert switch state
+        });
+      });
+    }
+
+    if (elements.simSpeedSlider) {
+      elements.simSpeedSlider.addEventListener('input', (e) => {
+        elements.simSpeedVal.innerText = `${e.target.value}s`;
+      });
+      
+      elements.simSpeedSlider.addEventListener('change', (e) => {
+        if (state.simulation.running) {
+          fetch(API_ROUTES.simStart, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ intervalSeconds: e.target.value })
+          })
+          .then(res => res.json())
+          .then(res => {
+            if (res.status === 'success') {
+              updateSimulationUI(res.data);
+              showToast(`Simulation interval adjusted to ${e.target.value}s`, 'success');
+              appendSystemConsoleLine(`[SYSTEM] Simulation interval updated to ${e.target.value} seconds.`);
+            }
+          });
+        }
+      });
+    }
+
+    const triggerInject = (type, label) => {
+      fetch(API_ROUTES.simTrigger, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === 'success') {
+          showToast(`${label} injected successfully`, 'success');
+          fetchAllData();
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast(`Failed to inject ${label}`, 'error');
+      });
+    };
+
+    if (elements.btnInjectNormal) {
+      elements.btnInjectNormal.addEventListener('click', () => triggerInject('normal', 'Clean telemetry'));
+    }
+    if (elements.btnInjectReview) {
+      elements.btnInjectReview.addEventListener('click', () => triggerInject('review', 'Review-tier telemetry'));
+    }
+    if (elements.btnInjectSuspicious) {
+      elements.btnInjectSuspicious.addEventListener('click', () => triggerInject('suspicious', 'Suspicious telemetry'));
+    }
+
+    if (elements.btnSimReset) {
+      elements.btnSimReset.addEventListener('click', () => {
+        if (confirm('Are you sure you want to delete all simulated data? This will also stop the simulation.')) {
+          fetch(API_ROUTES.simReset, { method: 'POST' })
+          .then(res => res.json())
+          .then(res => {
+            if (res.status === 'success') {
+              printedSimMatches.clear();
+              elements.simTerminal.innerHTML = '';
+              appendSystemConsoleLine('[SYSTEM] Simulation database reset. All SIM_* records wiped.');
+              showToast('Simulation database reset complete', 'success');
+              fetchAllData();
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            showToast('Failed to reset simulation database', 'error');
+          });
+        }
+      });
+    }
+
+    if (elements.btnClearSimLogs) {
+      elements.btnClearSimLogs.addEventListener('click', () => {
+        elements.simTerminal.innerHTML = '';
+        appendSystemConsoleLine('[SYSTEM] Console logs cleared.');
+      });
+    }
   }
 
   // --- Data Fetching ---
@@ -242,9 +398,10 @@ document.addEventListener('DOMContentLoaded', () => {
     Promise.all([
       fetch(API_ROUTES.leaderboard).then(res => res.json()),
       fetch(API_ROUTES.flagged).then(res => res.json()),
-      fetch(API_ROUTES.matchmaking).then(res => res.json())
+      fetch(API_ROUTES.matchmaking).then(res => res.json()),
+      fetch(API_ROUTES.simStatus).then(res => res.json())
     ])
-    .then(([leaderboardRes, flaggedRes, matchmakingRes]) => {
+    .then(([leaderboardRes, flaggedRes, matchmakingRes, simStatusRes]) => {
       // API checks
       if (leaderboardRes.status === 'success') {
         state.leaderboard = leaderboardRes.data || [];
@@ -255,6 +412,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (matchmakingRes.status === 'success') {
         state.matchmaking = matchmakingRes.data || [];
       }
+      if (simStatusRes.status === 'success') {
+        updateSimulationUI(simStatusRes.data);
+      }
 
       // Update UI components
       updateDashboardStats();
@@ -263,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderLeaderboard();
       renderFlagged();
       renderMatchmaking();
+      updateSimulationConsole();
 
       if (callback) callback();
     })
@@ -684,6 +845,125 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // --- Simulation Helper Functions ---
+  const printedSimMatches = new Set();
+
+  function updateSimulationUI(simData) {
+    state.simulation = simData;
+    const isRunning = simData.running;
+
+    if (elements.simToggleCheckbox) {
+      elements.simToggleCheckbox.checked = isRunning;
+    }
+
+    if (elements.simStatusDot) {
+      elements.simStatusDot.className = isRunning ? 'status-pulse-dot running' : 'status-pulse-dot';
+    }
+
+    if (elements.simStatusText) {
+      elements.simStatusText.innerText = isRunning ? 'Running' : 'Stopped';
+      elements.simStatusText.className = isRunning ? 'status-label-text running' : 'status-label-text';
+    }
+
+    if (elements.simPowerTitle) {
+      elements.simPowerTitle.innerText = isRunning ? 'Stop Simulator' : 'Start Simulator';
+    }
+
+    if (elements.simActiveBadge) {
+      if (isRunning) {
+        elements.simActiveBadge.classList.remove('hidden');
+      } else {
+        elements.simActiveBadge.classList.add('hidden');
+      }
+    }
+
+    if (elements.simSpeedSlider) {
+      elements.simSpeedSlider.value = simData.intervalSeconds;
+    }
+    if (elements.simSpeedVal) {
+      elements.simSpeedVal.innerText = `${simData.intervalSeconds}s`;
+    }
+
+    // Adjust polling intervals based on simulation status
+    if (isRunning) {
+      startPollingScheduler(3000); // Poll every 3 seconds for active simulation updates
+    } else {
+      startPollingScheduler(30000); // Poll every 30 seconds for passive dashboard sync
+    }
+  }
+
+  function updateSimulationConsole() {
+    if (!elements.simTerminal) return;
+
+    const allRecords = [];
+    state.leaderboard.forEach(p => {
+      if (p.player_id.startsWith('SIM_')) {
+        allRecords.push({ ...p, isFlagged: false });
+      }
+    });
+    state.flagged.forEach(p => {
+      if (p.player_id.startsWith('SIM_')) {
+        allRecords.push({ ...p, isFlagged: true });
+      }
+    });
+
+    // Sort ascending by submitted_at to log chronologically
+    allRecords.sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+
+    allRecords.forEach(item => {
+      const uniqueKey = `${item.player_id}::${item.match_id}::${item.submitted_at}`;
+      if (!printedSimMatches.has(uniqueKey)) {
+        printedSimMatches.add(uniqueKey);
+        appendTerminalLine(item);
+      }
+    });
+  }
+
+  function appendTerminalLine(item) {
+    const time = item.submitted_at ? new Date(item.submitted_at).toLocaleTimeString() : new Date().toLocaleTimeString();
+    let lineClass = 'clean-line';
+    let text = '';
+
+    if (item.isFlagged) {
+      const details = item.anomaly_details || {};
+      const status = details.status || 'Review';
+      const rules = details.violatedRules ? details.violatedRules.map(r => r.rule).join(', ') : 'Unknown Rule';
+
+      if (status === 'Suspicious') {
+        lineClass = 'suspicious-line';
+        text = `[${time}] [BLACKLIST] Player ${item.player_id} banned from matchmaking in ${item.region}. Violations: ${rules}. Score: ${item.score.toLocaleString()}, K/D: ${item.kills}/${item.deaths} (Duration: ${item.match_duration_seconds}s, Ping: ${item.ping}ms)`;
+      } else {
+        lineClass = 'review-line';
+        text = `[${time}] [REVIEW] Player ${item.player_id} flagged for review in ${item.region}. Violations: ${rules}. Score: ${item.score.toLocaleString()}, K/D: ${item.kills}/${item.deaths} (Duration: ${item.match_duration_seconds}s, Ping: ${item.ping}ms)`;
+      }
+    } else {
+      if (item.risk_status === 'Review' || item.riskScore === 2) {
+        lineClass = 'review-line';
+        text = `[${time}] [REVIEW] Player ${item.player_id} flagged for review in ${item.region}. Score: ${item.score.toLocaleString()}, K/D: ${item.kills}/${item.deaths} (Duration: ${(item.match_duration_seconds/60).toFixed(1)}m, Ping: ${item.ping}ms)`;
+      } else {
+        lineClass = 'clean-line';
+        text = `[${time}] [CLEAN] Player ${item.player_id} completed match ${item.match_id} in ${item.region}. Score: ${item.score.toLocaleString()}, K/D: ${item.kills}/${item.deaths} (Ping: ${item.ping}ms)`;
+      }
+    }
+
+    const line = document.createElement('div');
+    line.className = `terminal-line ${lineClass}`;
+    line.innerText = text;
+
+    elements.simTerminal.appendChild(line);
+    elements.simTerminal.scrollTop = elements.simTerminal.scrollHeight;
+  }
+
+  function appendSystemConsoleLine(text) {
+    if (!elements.simTerminal) return;
+    const time = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = 'terminal-line system-line';
+    line.innerText = `[${time}] ${text}`;
+    elements.simTerminal.appendChild(line);
+    elements.simTerminal.scrollTop = elements.simTerminal.scrollHeight;
   }
 
   // Start app
