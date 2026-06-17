@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GameOps Dashboard — Multiplayer Tournament Analytics</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Ionicons for modern, sleek icons -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <ion-icon name="game-controller-outline"></ion-icon>
+        </div>
+        <span class="brand-name">Game<span>Ops</span></span>
+      </div>
+      
+      <nav class="nav-menu">
+        <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+          <ion-icon name="grid-outline"></ion-icon>
+          <span>Dashboard</span>
+        </a>
+        <a href="#leaderboard" class="nav-item" data-tab="leaderboard">
+          <ion-icon name="trophy-outline"></ion-icon>
+          <span>Leaderboards</span>
+        </a>
+        <a href="#flagged" class="nav-item" data-tab="flagged">
+          <ion-icon name="shield-half-outline"></ion-icon>
+          <span>Security Audit</span>
+          <span class="badge badge-danger" id="flagged-badge">0</span>
+        </a>
+        <a href="#matchmaker" class="nav-item" data-tab="matchmaker">
+          <ion-icon name="people-outline"></ion-icon>
+          <span>Matchmaker</span>
+        </a>
+        <a href="#rules" class="nav-item" data-tab="rules">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          <span>Rule Reference</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="status-indicator online">
+          <span class="dot"></span>
+          <span class="status-text">Server Online</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      
+      <!-- HEADER -->
+      <header class="main-header">
+        <div class="header-title">
+          <h1 id="view-title">Dashboard Overview</h1>
+          <p id="view-subtitle">Ingest, analyze, and audit multiplayer match records.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-icon-only" id="refresh-btn" title="Refresh Data">
+            <ion-icon name="refresh-outline"></ion-icon>
+          </button>
+          <button class="btn btn-primary" id="open-ingest-btn">
+            <ion-icon name="add-circle-outline"></ion-icon>
+            <span>Ingest Match Score</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW: DASHBOARD OVERVIEW -->
+      <section id="view-dashboard" class="tab-view active">
+        <!-- STATS GRID -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon-wrapper blue">
+              <ion-icon name="people"></ion-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">Unique Players</span>
+              <h3 class="stat-value" id="stat-total-players">-</h3>
+            </div>
+            <div class="stat-trend neutral">Active Pools</div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon-wrapper green">
+              <ion-icon name="ticket"></ion-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">Total Matches</span>
+              <h3 class="stat-value" id="stat-total-matches">-</h3>
+            </div>
+            <div class="stat-trend positive">Ingested Logs</div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon-wrapper yellow">
+              <ion-icon name="wifi"></ion-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">Average Ping</span>
+              <h3 class="stat-value" id="stat-avg-ping">-</h3>
+            </div>
+            <div class="stat-trend" id="ping-status-text">Latency</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper red">
+              <ion-icon name="shield-alert"></ion-icon>
+            </div>
+            <div class="stat-data">
+              <span class="stat-label">Flagged Players</span>
+              <h3 class="stat-value" id="stat-flagged-count">-</h3>
+            </div>
+            <div class="stat-trend negative" id="flagged-rate-text">-</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- QUICK LEADERBOARD PANEL -->
+          <div class="card col-2">
+            <div class="card-header">
+              <h3>Top Performing Players</h3>
+              <a href="#leaderboard" class="card-link" onclick="switchTab('leaderboard')">View All</a>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Player ID</th>
+                      <th>Region</th>
+                      <th>Score</th>
+                      <th>Kills</th>
+                      <th>Deaths</th>
+                    </tr>
+                  </thead>
+                  <tbody id="quick-leaderboard-body">
+                    <tr>
+                      <td colspan="6" class="text-center">Loading leaderboard...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- RECENT SUBMISSIONS PANEL -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Recent Ingestions</h3>
+            </div>
+            <div class="card-body">
+              <div class="activity-feed" id="recent-ingestions-feed">
+                <div class="text-center py-4 text-muted">No recent submissions</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: LEADERBOARDS -->
+      <section id="view-leaderboard" class="tab-view">
+        <div class="card">
+          <div class="card-header filters-header">
+            <div class="filter-group">
+              <div class="search-wrapper">
+                <ion-icon name="search-outline"></ion-icon>
+                <input type="text" id="leaderboard-search" placeholder="Search by Player ID...">
+              </div>
+              <div class="select-wrapper">
+                <ion-icon name="globe-outline"></ion-icon>
+                <select id="leaderboard-region-filter">
+                  <option value="all">All Regions</option>
+                  <option value="India">India</option>
+                  <option value="USA">USA</option>
+                  <option value="Europe">Europe</option>
+                </select>
+              </div>
+            </div>
+            <div class="sorting-indicator">
+              <span>Sorted by: <strong>Score</strong> (Desc), <strong>Deaths</strong> (Asc), <strong>Kills</strong> (Desc) &bull; <span class="pill pill-warning" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; vertical-align: middle;">Review</span> players remain ranked pending investigation.</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Player ID</th>
+                    <th>Region</th>
+                    <th>Device</th>
+                    <th>Ping</th>
+                    <th>Score</th>
+                    <th>Kills</th>
+                    <th>Deaths</th>
+                    <th>Duration (min)</th>
+                  </tr>
+                </thead>
+                <tbody id="full-leaderboard-body">
+                  <tr>
+                    <td colspan="9" class="text-center">Loading leaderboard data...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: SECURITY AUDIT (FLAGGED) -->
+      <section id="view-flagged" class="tab-view">
+        <div class="flagged-header">
+          <div class="info-banner warning">
+            <ion-icon name="shield-half-outline"></ion-icon>
+            <div class="info-content">
+              <h4>Anomaly Detection Policy</h4>
+              <p>Players with risk scores of 2 are marked as <strong>Review</strong> (kept on leaderboards, flagged here). Players with risk scores 3+ are marked as <strong>Suspicious</strong> and are immediately blacklisted from leaderboards and matchmaking.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3>Audit Feed</h3>
+            <span class="results-count" id="flagged-results-count">0 Players Flagged</span>
+          </div>
+          <div class="card-body">
+            <div class="flagged-grid" id="flagged-cards-container">
+              <div class="text-center py-4 text-muted">Loading security logs...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: MATCHMAKER -->
+      <section id="view-matchmaker" class="tab-view">
+        <div class="info-banner info">
+          <ion-icon name="people-outline"></ion-icon>
+          <div class="info-content">
+            <h4>Regional Skill & Latency Matchmaker</h4>
+            <p>Clean players are dynamically grouped into matches. A valid queue matching pool requires exact matches in <strong>Region</strong>, <strong>Skill Tier</strong> (Beginner: 0-5k, Intermediate: 5-10k, Advanced: 10k+), and <strong>Ping Bucket</strong> (Low < 60ms, Medium 60-120ms, High > 120ms).</p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3>Active Queue Pools</h3>
+            <span class="results-count" id="matchmaking-pools-count">0 Active Pools</span>
+          </div>
+          <div class="card-body">
+            <div class="matchmaker-container" id="matchmaking-pools-container">
+              <div class="text-center py-4 text-muted">Loading queue pools...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: RULE REFERENCE -->
+      <section id="view-rules" class="tab-view">
+        <div class="rules-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>Ingested Risk Evaluations</h3>
+            </div>
+            <div class="card-body">
+              <ul class="rule-list">
+                <li>
+                  <div class="rule-header">
+                    <span class="rule-badge">Rule 1</span>
+                    <h4>Abnormal Score Rate</h4>
+                  </div>
+                  <p class="rule-desc">Score per minute exceeds 5,000.</p>
+                  <code>score / (match_duration_seconds / 60) > 5000</code>
+                </li>
+                <li>
+                  <div class="rule-header">
+                    <span class="rule-badge">Rule 2</span>
+                    <h4>Abnormal Kill Velocity</h4>
+                  </div>
+                  <p class="rule-desc">Kills per minute exceeds 100.</p>
+                  <code>kills / (match_duration_seconds / 60) > 100</code>
+                </li>
+                <li>
+                  <div class="rule-header">
+                    <span class="rule-badge">Rule 3</span>
+                    <h4>God-Mode & Aimbot Metric</h4>
+                  </div>
+                  <p class="rule-desc">Player has 100 or more kills with zero deaths in a single match.</p>
+                  <code>kills >= 100 && deaths === 0</code>
+                </li>
+                <li>
+                  <div class="rule-header">
+                    <span class="rule-badge">Rule 4</span>
+                    <h4>Instant High Score Hack</h4>
+                  </div>
+                  <p class="rule-desc">Match duration is under 2 minutes (120 seconds) and score is over 50,000.</p>
+                  <code>match_duration_seconds < 120 && score > 50000</code>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Action & Mitigation Tiers</h3>
+            </div>
+            <div class="card-body">
+              <div class="mitigation-flow">
+                <div class="flow-step normal">
+                  <div class="flow-icon"><ion-icon name="checkmark-circle"></ion-icon></div>
+                  <div class="flow-text">
+                    <h4>Tier 1: Normal (Risk 0 - 1)</h4>
+                    <p>Clean match history. Fully eligible for regional leaderboard rankings and standard matchmaking pools.</p>
+                  </div>
+                </div>
+                <div class="flow-step review">
+                  <div class="flow-icon"><ion-icon name="alert-circle"></ion-icon></div>
+                  <div class="flow-text">
+                    <h4>Tier 2: Review (Risk 2)</h4>
+                    <p>Subtle telemetry anomalies. Kept on leaderboards, but highlighted in Security Audits for manual game master review.</p>
+                  </div>
+                </div>
+                <div class="flow-step suspicious">
+                  <div class="flow-icon"><ion-icon name="ban-sharp"></ion-icon></div>
+                  <div class="flow-text">
+                    <h4>Tier 3: Suspicious (Risk 3+)</h4>
+                    <p>Severe cheats detected. Instantly and automatically blacklisted from all public leaderboards and isolated from matchmaking queues.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: SCORE INGESTION -->
+  <div class="modal-backdrop" id="ingest-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Ingest Match Score</h3>
+        <button class="modal-close" id="close-modal-btn">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+      <form id="ingest-form">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="player_id">Player ID</label>
+              <input type="text" id="player_id" placeholder="e.g. P099" required>
+            </div>
+            <div class="form-group">
+              <label for="match_id">Match ID</label>
+              <input type="text" id="match_id" placeholder="e.g. M102" required>
+            </div>
+            <div class="form-group">
+              <label for="region">Region</label>
+              <select id="region" required>
+                <option value="" disabled selected>Select Region</option>
+                <option value="India">India</option>
+                <option value="USA">USA</option>
+                <option value="Europe">Europe</option>
+                <option value="Asia">Asia</option>
+                <option value="South America">South America</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="device">Device</label>
+              <select id="device" required>
+                <option value="" disabled selected>Select Device</option>
+                <option value="Android">Android</option>
+                <option value="iOS">iOS</option>
+                <option value="PC">PC</option>
+                <option value="Console">Console</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="ping">Ping (ms)</label>
+              <input type="number" id="ping" min="0" placeholder="e.g. 45" required>
+            </div>
+            <div class="form-group">
+              <label for="score">Final Score</label>
+              <input type="number" id="score" min="0" placeholder="e.g. 7500" required>
+            </div>
+            <div class="form-group">
+              <label for="kills">Kills</label>
+              <input type="number" id="kills" min="0" placeholder="e.g. 24" required>
+            </div>
+            <div class="form-group">
+              <label for="deaths">Deaths</label>
+              <input type="number" id="deaths" min="0" placeholder="e.g. 3" required>
+            </div>
+            <div class="form-group col-span-2">
+              <label for="match_duration_seconds">Match Duration (seconds)</label>
+              <input type="number" id="match_duration_seconds" min="1" placeholder="e.g. 480" required>
+            </div>
+          </div>
+          <div class="error-summary hidden" id="form-error-summary">
+            <!-- Dynamic validation messages -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancel-modal-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <ion-icon name="send-outline"></ion-icon>
+            <span>Submit Telemetry</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Script -->
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+{
+  "info": {
+    "_postman_id": "8b5f3964-b0c7-433a-9657-3a4731c3bf1e",
+    "name": "Game Ops System API",
+    "description": "Postman Collection for testing the Game Ops System backend application.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Root / Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Match Score (Normal)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"player_id\": \"P100\",\n  \"match_id\": \"M200\",\n  \"region\": \"India\",\n  \"device\": \"Android\",\n  \"ping\": 45,\n  \"score\": 7200,\n  \"kills\": 25,\n  \"deaths\": 3,\n  \"match_duration_seconds\": 480\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/scores",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "scores"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Match Score (Suspicious - AimBot/GodMode)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"player_id\": \"P500\",\n  \"match_id\": \"M201\",\n  \"region\": \"USA\",\n  \"device\": \"PC\",\n  \"ping\": 20,\n  \"score\": 95000,\n  \"kills\": 150,\n  \"deaths\": 0,\n  \"match_duration_seconds\": 90\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/scores",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "scores"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Global Leaderboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/leaderboard",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "leaderboard"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Regional Leaderboard (India)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/leaderboard/India",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "leaderboard",
+            "India"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Flagged Players",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/flagged-players",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "flagged-players"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Matchmaking Pools",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/matchmaking",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "api",
+            "matchmaking"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

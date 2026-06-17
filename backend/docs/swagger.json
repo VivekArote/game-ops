@@ -1,0 +1,357 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Game Ops System API",
+    "description": "Backend services for multiplayer game events handling score ingestion, ranked leaderboards, anomaly detection, and matchmaking grouping.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/api/scores": {
+      "post": {
+        "summary": "Submit a match score record",
+        "description": "Ingests player match metrics, validates the schema, computes risk status, and stores the record.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreSubmission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Score record saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or invalid request payload"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/leaderboard": {
+      "get": {
+        "summary": "Retrieve the global ranked leaderboard",
+        "description": "Excludes suspicious players (risk score >= 3) and returns players ranked by high score, fewer deaths, and higher kills.",
+        "responses": {
+          "200": {
+            "description": "Leaderboard retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/leaderboard/{region}": {
+      "get": {
+        "summary": "Retrieve the region-specific ranked leaderboard",
+        "description": "Same logic as the global leaderboard, but filtered for a specific geographical region.",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "description": "Region name to filter by (e.g. India, USA, Europe)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Regional leaderboard retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionalLeaderboardResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/flagged-players": {
+      "get": {
+        "summary": "List flagged and suspicious players",
+        "description": "Retrieves players under review (risk score = 2) or suspicious (risk score >= 3) along with detailed information about the violated rules.",
+        "responses": {
+          "200": {
+            "description": "Flagged players retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlaggedPlayersResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/matchmaking": {
+      "get": {
+        "summary": "Retrieve active matchmaking pools",
+        "description": "Groups players based on Region, Skill Tier (Beginner, Intermediate, Advanced), and Ping Bucket (Low, Medium, High). Suspicious players are excluded.",
+        "responses": {
+          "200": {
+            "description": "Matchmaking pools retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchmakingResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ScoreSubmission": {
+        "type": "object",
+        "required": [
+          "player_id",
+          "match_id",
+          "region",
+          "device",
+          "ping",
+          "score",
+          "kills",
+          "deaths",
+          "match_duration_seconds"
+        ],
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "example": "P001"
+          },
+          "match_id": {
+            "type": "string",
+            "example": "M001"
+          },
+          "region": {
+            "type": "string",
+            "example": "India"
+          },
+          "device": {
+            "type": "string",
+            "example": "Android"
+          },
+          "ping": {
+            "type": "integer",
+            "example": 55
+          },
+          "score": {
+            "type": "integer",
+            "example": 3200
+          },
+          "kills": {
+            "type": "integer",
+            "example": 18
+          },
+          "deaths": {
+            "type": "integer",
+            "example": 4
+          },
+          "match_duration_seconds": {
+            "type": "integer",
+            "example": 420
+          }
+        }
+      },
+      "ScoreResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "success"
+          },
+          "message": {
+            "type": "string",
+            "example": "Score record saved successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "player_id": { "type": "string" },
+              "match_id": { "type": "string" },
+              "region": { "type": "string" },
+              "device": { "type": "string" },
+              "ping": { "type": "integer" },
+              "score": { "type": "integer" },
+              "kills": { "type": "integer" },
+              "deaths": { "type": "integer" },
+              "match_duration_seconds": { "type": "integer" },
+              "submitted_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "LeaderboardResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "results": { "type": "integer", "example": 1 },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rank": { "type": "integer", "example": 1 },
+                "player_id": { "type": "string" },
+                "match_id": { "type": "string" },
+                "region": { "type": "string" },
+                "device": { "type": "string" },
+                "ping": { "type": "integer" },
+                "score": { "type": "integer" },
+                "kills": { "type": "integer" },
+                "deaths": { "type": "integer" },
+                "match_duration_seconds": { "type": "integer" },
+                "submitted_at": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        }
+      },
+      "RegionalLeaderboardResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "region": { "type": "string", "example": "India" },
+          "results": { "type": "integer", "example": 1 },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rank": { "type": "integer", "example": 1 },
+                "player_id": { "type": "string" },
+                "match_id": { "type": "string" },
+                "region": { "type": "string" },
+                "device": { "type": "string" },
+                "ping": { "type": "integer" },
+                "score": { "type": "integer" },
+                "kills": { "type": "integer" },
+                "deaths": { "type": "integer" },
+                "match_duration_seconds": { "type": "integer" },
+                "submitted_at": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        }
+      },
+      "FlaggedPlayersResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "results": { "type": "integer", "example": 1 },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "player_id": { "type": "string" },
+                "match_id": { "type": "string" },
+                "region": { "type": "string" },
+                "device": { "type": "string" },
+                "ping": { "type": "integer" },
+                "score": { "type": "integer" },
+                "kills": { "type": "integer" },
+                "deaths": { "type": "integer" },
+                "match_duration_seconds": { "type": "integer" },
+                "submitted_at": { "type": "string" },
+                "anomaly_details": {
+                  "type": "object",
+                  "properties": {
+                    "riskScore": { "type": "integer", "example": 3 },
+                    "status": { "type": "string", "example": "Suspicious" },
+                    "violatedRules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rule": { "type": "string" },
+                          "description": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MatchmakingResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "results": { "type": "integer", "example": 1 },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "region": { "type": "string", "example": "India" },
+                "skill_tier": { "type": "string", "example": "Beginner" },
+                "ping_bucket": { "type": "string", "example": "Low" },
+                "player_count": { "type": "integer", "example": 1 },
+                "players": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "player_id": { "type": "string" },
+                      "match_id": { "type": "string" },
+                      "score": { "type": "integer" },
+                      "ping": { "type": "integer" },
+                      "device": { "type": "string" },
+                      "risk_status": { "type": "string", "example": "Normal" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
